@@ -1,0 +1,22 @@
+# CPU / RAM monitoring — required by all providers
+psutil
+
+# Windows AMD GPU monitoring via ADLX
+ADLXPybind; platform_system == "Windows"
+
+# AMD GPU monitoring — required by AMDProvider only (ROCm)
+# Only needed when using AMD GPU with ROCm; safe to install on other systems
+# rocm_smi_lib
+
+# ---------------------------------------------------------------------------
+# The following are provided by ComfyUI itself — DO NOT add them here.
+# Listed for reference only so manual environment setups know the minimums.
+# ---------------------------------------------------------------------------
+#
+# torch >= 2.5
+#   torch.cuda is used for AMD ROCm fallback and allocator stats.
+#   Install the appropriate ComfyUI-supported build for your AMD environment.
+#
+# aiohttp >= 3.8
+#   Used for HTTP routes and WebSocket broadcast (web.json_response, server.send_json).
+#   ComfyUI already depends on aiohttp; no separate installation needed.

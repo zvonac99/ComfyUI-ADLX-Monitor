@@ -1,0 +1,14 @@
+[project]
+name = "ComfyUI-ADLX-Monitor"
+version = "1.1.0"
+description = "AMD-first ComfyUI monitor focused on ADLX telemetry on Windows, with compact GPU/CPU/RAM monitoring and workflow predictor support."
+license = { text = "MIT" }
+dependencies = ["psutil", "ADLXPybind; platform_system == 'Windows'"]
+
+[project.urls]
+Repository = "https://github.com/zvonac99/ComfyUI-ADLX-Monitor"
+
+[tool.comfy]
+PublisherId = "allanmeng"
+DisplayName = "ComfyUI-ADLX-Monitor"
+Icon = ""
