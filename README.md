@@ -253,6 +253,7 @@ Adjustable in the **ADLX_Mon** section of ComfyUI's settings page:
 - **Font Size**: Status bar text size (12–22 px, default 16 px)
 - **Provider Mode**: `Auto`, `Prefer AMD`, or `Force AMD`
 - **Show Bar Values**: keep the chip compact with only the `ADLX` label and active provider badge
+- **UI Mode**: `Top Bar (new menu)` or `Floating Overlay`
 
 Notes:
 
@@ -261,6 +262,8 @@ Notes:
 - `Prefer AMD` explicitly tries the AMD provider first, then continues with the same AMD-only auto detection path.
 - `Force AMD` does not silently fall back. If AMD telemetry is unavailable, ADLX Monitor surfaces a visible configuration error instead.
 - The compact chip now shows the active provider badge and a reduced summary of CPU, RAM, and GPU memory usage.
+- `Top Bar (new menu)` embeds the chip into the ComfyUI top bar — works with ComfyUI's newer menu system.
+- `Floating Overlay` detaches the chip from the top bar and places it as a draggable pill anywhere on the canvas — works with both old and new ComfyUI menu systems. Position is saved between sessions.
 
 ---
 

@@ -693,8 +693,8 @@
 
 .adlx-monitor-bar.adlx-overlay-mode {
   position: fixed;
-  bottom: 20px;
-  right: 16px;
+  top: 0;
+  left: 0;
   z-index: 9999;
   cursor: grab;
   padding: 4px 6px;

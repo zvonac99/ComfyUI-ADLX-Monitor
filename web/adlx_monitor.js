@@ -255,7 +255,6 @@ function applyChipPosition(bar, left, top) {
   bar.style.top    = `${t}px`;
   bar.style.bottom = "auto";
   bar.style.right  = "auto";
-  saveChipPosition(l, t);
 }
 
 function restoreChipPosition(bar) {
@@ -275,35 +274,46 @@ function enableChipDrag(bar) {
 
   const onPointerMove = (e) => {
     if (!dragState) return;
+    const dx = e.clientX - dragState.startX;
+    const dy = e.clientY - dragState.startY;
+    if (!dragState.hasMoved && Math.hypot(dx, dy) < 4) return;
+    dragState.hasMoved = true;
+    bar.classList.add("is-dragging");
     applyChipPosition(bar, e.clientX - dragState.offsetX, e.clientY - dragState.offsetY);
   };
 
   const stopDrag = () => {
     if (!dragState) return;
+    const wasDragging = dragState.hasMoved;
     dragState = null;
     bar.classList.remove("is-dragging");
     window.removeEventListener("pointermove",   onPointerMove);
     window.removeEventListener("pointerup",     stopDrag);
     window.removeEventListener("pointercancel", stopDrag);
+    // Save position only after a real drag — never during click or initial layout.
+    if (wasDragging) {
+      const rect = bar.getBoundingClientRect();
+      saveChipPosition(rect.left, rect.top);
+    }
   };
 
   bar.addEventListener("pointerdown", (e) => {
     if (e.button !== 0) return;
     if (e.target.closest("button, a")) return;
     const rect = bar.getBoundingClientRect();
-    dragState = { offsetX: e.clientX - rect.left, offsetY: e.clientY - rect.top };
-    bar.classList.add("is-dragging");
-    bar.setPointerCapture?.(e.pointerId);
+    dragState = {
+      offsetX:  e.clientX - rect.left,
+      offsetY:  e.clientY - rect.top,
+      startX:   e.clientX,
+      startY:   e.clientY,
+      hasMoved: false,
+    };
     window.addEventListener("pointermove",   onPointerMove);
     window.addEventListener("pointerup",     stopDrag);
     window.addEventListener("pointercancel", stopDrag);
-    e.preventDefault();
   });
-
-  window.addEventListener("resize", () => {
-    const rect = bar.getBoundingClientRect();
-    applyChipPosition(bar, rect.left, rect.top);
-  });
+  // No window resize handler — avoids corrupting saved position during initial layout.
+  // (The panel uses the same approach and works correctly.)
 }
 
 // ---------------------------------------------------------------------------
@@ -347,14 +357,19 @@ function mountBar(bar) {
   } else {
     bar.classList.add("adlx-overlay-mode");
     document.body.appendChild(bar);
-    enableChipDrag(bar);
-    if (!restoreChipPosition(bar)) {
-      requestAnimationFrame(() => {
+    if (!bar._dragEnabled) {
+      enableChipDrag(bar);
+      bar._dragEnabled = true;
+    }
+    // Use rAF so the bar is rendered and has correct offsetWidth/Height before
+    // we compute the clamped position.
+    requestAnimationFrame(() => {
+      if (!restoreChipPosition(bar)) {
         const w = bar.offsetWidth  || 200;
         const h = bar.offsetHeight || 36;
         applyChipPosition(bar, window.innerWidth - w - 16, window.innerHeight - h - 20);
-      });
-    }
+      }
+    });
   }
 }
 
