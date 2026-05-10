@@ -160,6 +160,12 @@ Before you click Run, the plugin quietly estimates one thing:
 
 That probability is what the `PRED` capsule shows. The most common reason AI image generation crashes is simple — **not enough VRAM**. But "not enough" isn't binary: the system can borrow from RAM and virtual memory to compensate, so success probability is a continuous value, not a yes/no.
 
+#### Real-world example
+
+<img src="screenshot/ADLX_Predict1.png" width="1100" alt="ADLX predictor with two Flux 2 Klein model loaders" />
+
+The workflow above has two Flux 2 Klein model loaders — one Safetensors and one GGUF — controlled by a Fast Groups Bypasser (rgthree) so only one runs at a time. The predictor sees **both** loaders as active because it scans the graph statically; it cannot know which group is currently muted. With 32.45 G of detected models against 9.6 G of effective VRAM, success rate comes out at **17%** — which accurately reflects what would happen if both models tried to load simultaneously. In practice, with only one group active, the real success rate is much higher. This is the expected and intentional behavior: the predictor is conservative by design.
+
 ### Core Insight: Models Don't Need to Be in VRAM Simultaneously
 
 ComfyUI workflows run **serially** — CLIP encoding, diffusion sampling, VAE decoding each load, run, and unload one at a time.  
