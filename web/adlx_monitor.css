@@ -686,3 +686,32 @@
   margin-top: 4px;
 }
 
+/* ---------------------------------------------------------------------------
+   Overlay mode — chip floats freely over the workflow canvas.
+   Works with both old and new ComfyUI menu systems.
+   --------------------------------------------------------------------------- */
+
+.adlx-monitor-bar.adlx-overlay-mode {
+  position: fixed;
+  bottom: 20px;
+  right: 16px;
+  z-index: 9999;
+  cursor: grab;
+  padding: 4px 6px;
+  border-radius: 999px;
+  background: rgba(18, 18, 24, 0.88);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  box-shadow:
+    0 6px 24px rgba(0, 0, 0, 0.45),
+    inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+.adlx-monitor-bar.adlx-overlay-mode.is-dragging {
+  cursor: grabbing;
+  box-shadow:
+    0 12px 36px rgba(0, 0, 0, 0.6),
+    inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+

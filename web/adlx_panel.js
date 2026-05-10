@@ -360,7 +360,7 @@ export function mountPanel(panel) {
   enablePanelDrag(panel, panel._header);
 }
 
-export function togglePanel(force) {
+export function togglePanel(force, anchorEl) {
   if (!_panel) return;
   const next = typeof force === "boolean" ? force : _panel.hidden;
   _panel.hidden = !next;
@@ -370,8 +370,31 @@ export function togglePanel(force) {
       if (!_panel || _panel.hidden) return;
       if (restorePanelPosition(_panel)) return;
       if (_panel._positionRestored) return;
-      const rect = _panel.getBoundingClientRect();
-      applyPanelPosition(_panel, rect.left, rect.top);
+
+      if (anchorEl) {
+        // Smart positioning: open panel above or below the chip depending on where the chip is.
+        const aRect  = anchorEl.getBoundingClientRect();
+        const panelW = _panel.offsetWidth  || 360;
+        const panelH = _panel.offsetHeight || 300;
+
+        // Align right edge of panel with right edge of chip, clamped to viewport.
+        let left = aRect.right - panelW;
+        left = Math.max(8, Math.min(left, window.innerWidth - panelW - 8));
+
+        // Open above chip if chip is in the bottom half of the screen.
+        const inBottomHalf = aRect.top > window.innerHeight / 2;
+        let top;
+        if (inBottomHalf) {
+          top = Math.max(8, aRect.top - panelH - 8);
+        } else {
+          top = Math.min(aRect.bottom + 8, window.innerHeight - panelH - 8);
+        }
+
+        applyPanelPosition(_panel, left, top);
+      } else {
+        const rect = _panel.getBoundingClientRect();
+        applyPanelPosition(_panel, rect.left, rect.top);
+      }
     });
   }
 }

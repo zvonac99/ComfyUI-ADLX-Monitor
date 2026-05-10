@@ -36,7 +36,10 @@ const S = {
   showBarValues: `${NS}.ShowBarValues`,
   fontSize:      `${NS}.FontSize`,
   refreshMs:     `${NS}.RefreshInterval`,
+  uiMode:        `${NS}.UiMode`,
 };
+
+const CHIP_POS_KEY = `${NS}.ChipPosition`;
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -102,6 +105,28 @@ function makeProviderModeSelectType() {
       { label: "Force AMD",  value: "force-amd" },
     ];
     const normalized = value || "auto";
+    options.forEach(optData => {
+      const opt = document.createElement("option");
+      opt.value       = optData.value;
+      opt.textContent = optData.label;
+      if (normalized === optData.value) opt.selected = true;
+      sel.appendChild(opt);
+    });
+    sel.addEventListener("change", () => setter(sel.value));
+    return sel;
+  };
+}
+
+function makeUiModeSelectType() {
+  return (_name, setter, value) => {
+    const sel = document.createElement("select");
+    sel.style.cssText = "background:#2a2a2a;border:1px solid #555;border-radius:4px;" +
+                        "color:inherit;padding:3px 8px;font-size:inherit;cursor:pointer;";
+    const options = [
+      { label: "Top Bar (new menu)", value: "top-bar" },
+      { label: "Floating Overlay",   value: "overlay"  },
+    ];
+    const normalized = value || "top-bar";
     options.forEach(optData => {
       const opt = document.createElement("option");
       opt.value       = optData.value;
@@ -212,9 +237,80 @@ function buildChipTooltip(snap) {
 }
 
 // ---------------------------------------------------------------------------
+// Chip position persistence + drag  (Overlay mode)
+// ---------------------------------------------------------------------------
+
+function saveChipPosition(left, top) {
+  try { localStorage.setItem(CHIP_POS_KEY, JSON.stringify({ left, top })); } catch (_) {}
+}
+
+function applyChipPosition(bar, left, top) {
+  const w    = bar.offsetWidth  || 200;
+  const h    = bar.offsetHeight || 36;
+  const maxL = Math.max(8, window.innerWidth  - w - 8);
+  const maxT = Math.max(8, window.innerHeight - h - 8);
+  const l    = Math.min(Math.max(8, left), maxL);
+  const t    = Math.min(Math.max(8, top),  maxT);
+  bar.style.left   = `${l}px`;
+  bar.style.top    = `${t}px`;
+  bar.style.bottom = "auto";
+  bar.style.right  = "auto";
+  saveChipPosition(l, t);
+}
+
+function restoreChipPosition(bar) {
+  try {
+    const raw = localStorage.getItem(CHIP_POS_KEY);
+    if (!raw) return false;
+    const { left, top } = JSON.parse(raw);
+    if (typeof left !== "number" || typeof top !== "number") return false;
+    applyChipPosition(bar, left, top);
+    return true;
+  } catch (_) {}
+  return false;
+}
+
+function enableChipDrag(bar) {
+  let dragState = null;
+
+  const onPointerMove = (e) => {
+    if (!dragState) return;
+    applyChipPosition(bar, e.clientX - dragState.offsetX, e.clientY - dragState.offsetY);
+  };
+
+  const stopDrag = () => {
+    if (!dragState) return;
+    dragState = null;
+    bar.classList.remove("is-dragging");
+    window.removeEventListener("pointermove",   onPointerMove);
+    window.removeEventListener("pointerup",     stopDrag);
+    window.removeEventListener("pointercancel", stopDrag);
+  };
+
+  bar.addEventListener("pointerdown", (e) => {
+    if (e.button !== 0) return;
+    if (e.target.closest("button, a")) return;
+    const rect = bar.getBoundingClientRect();
+    dragState = { offsetX: e.clientX - rect.left, offsetY: e.clientY - rect.top };
+    bar.classList.add("is-dragging");
+    bar.setPointerCapture?.(e.pointerId);
+    window.addEventListener("pointermove",   onPointerMove);
+    window.addEventListener("pointerup",     stopDrag);
+    window.addEventListener("pointercancel", stopDrag);
+    e.preventDefault();
+  });
+
+  window.addEventListener("resize", () => {
+    const rect = bar.getBoundingClientRect();
+    applyChipPosition(bar, rect.left, rect.top);
+  });
+}
+
+// ---------------------------------------------------------------------------
 // Toolbar chip
 // ---------------------------------------------------------------------------
 
+let _bar  = null;
 let _chip = null;
 
 function buildBar() {
@@ -230,8 +326,9 @@ function buildBar() {
   chipEl.appendChild(valEl);
   _chip = { el: chipEl, valEl };
 
+  _bar = bar;
   bar.appendChild(chipEl);
-  chipEl.addEventListener("click",      () => togglePanel());
+  chipEl.addEventListener("click",      () => togglePanel(undefined, chipEl));
   chipEl.addEventListener("mouseenter", () => { if (_snap) showTooltip(chipEl, buildChipTooltip(_snap)); });
   chipEl.addEventListener("mousemove",  () => { if (_tipTarget === chipEl && _snap) positionTooltip(chipEl); });
   chipEl.addEventListener("mouseleave", hideTooltip);
@@ -240,12 +337,31 @@ function buildBar() {
 }
 
 function mountBar(bar) {
-  if (app.menu?.settingsGroup?.element) {
+  const mode       = getSetting(S.uiMode, "top-bar");
+  const hasNewMenu = !!app.menu?.settingsGroup?.element;
+
+  if (mode === "top-bar" && hasNewMenu) {
+    bar.classList.remove("adlx-overlay-mode");
+    bar.style.cssText = "";
     app.menu.settingsGroup.element.before(bar);
   } else {
-    Object.assign(bar.style, { position: "fixed", top: "6px", right: "8px", zIndex: "9999" });
+    bar.classList.add("adlx-overlay-mode");
     document.body.appendChild(bar);
+    enableChipDrag(bar);
+    if (!restoreChipPosition(bar)) {
+      requestAnimationFrame(() => {
+        const w = bar.offsetWidth  || 200;
+        const h = bar.offsetHeight || 36;
+        applyChipPosition(bar, window.innerWidth - w - 16, window.innerHeight - h - 20);
+      });
+    }
   }
+}
+
+function remountBar(_newMode) {
+  if (!_bar) return;
+  _bar.parentNode?.removeChild(_bar);
+  mountBar(_bar);
 }
 
 // ---------------------------------------------------------------------------
@@ -463,6 +579,13 @@ app.registerExtension({
       type: "boolean", defaultValue: true,
       category: [NS, "\uE001General", "\uE005Bar Display"],
       onChange: applyVisibility,
+    });
+    app.ui.settings.addSetting({
+      id: S.uiMode, name: "UI Mode",
+      tooltip: "Top Bar: chip in the new ComfyUI menu. Floating Overlay: draggable chip over the canvas — works with both old and new menu.",
+      type: makeUiModeSelectType(), defaultValue: "top-bar",
+      category: [NS, "\uE001General", "\uE003UI Mode"],
+      onChange: remountBar,
     });
 
     const bar   = buildBar();
