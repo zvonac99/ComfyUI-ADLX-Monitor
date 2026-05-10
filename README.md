@@ -41,6 +41,13 @@ This project is a focused fork of **ComfyUI-XPUSYS-Monitor**.
 
 <img src="screenshot/ADLX_Bar.png" width="1100" alt="ADLX top bar chip" />
 
+The chip can run in two modes, switchable via the **UI Mode** setting:
+
+- **Top Bar (new menu)** — embeds the chip into the ComfyUI top bar (default)
+- **Floating Overlay** — detaches the chip from the top bar and places it as a draggable pill anywhere on the canvas; works with both old and new ComfyUI menu systems
+
+<img src="screenshot/ADLX_Overlay.png" width="1100" alt="ADLX floating overlay chip" />
+
 The top bar chip is the always-visible summary surface.
 
 ### What The Chip Numbers Mean
